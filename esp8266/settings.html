@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Aquarium Control</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <style>
+	.space-around {padding-bottom:10px; padding-left:10px; padding-right:10px;}
+	.float-right {float:right}
+	.text-white {color: #fff !important;}
+	.header {margin-bottom:0px; padding-bottom:5px; padding-top:5px; background-color: #343a40;}
+</style>
+</head>
+<body style="background-color: #030C22 !important;">
+<div ng-app="myApp" ng-controller="myCtrl">
+	<div class="jumbotron text-center text-white header" >
+	  <h2>Aquarium Doser</h2>
+	  <h4>Network and user settings</h4>
+	</div>
+	<br>
+	<div class="container text-white">
+		<div style="padding:10px;" class="row">
+			<h4 class="text-white">Network Settings</h4>
+			<div class ="form-inline col-sm">
+				<label >SSID:</label>
+				<input  type="text" class="form-control" id="ssid" ng-model="data.ssid" name="ssid" placeholder="SSID">
+				<label >Password:</label>
+				<input  type="password" class="form-control" id="pass" ng-model="data.pass" name="pass" placeholder="NetworkPassword">
+				<label >Password Confirm:</label>
+				<input  type="password" class="form-control" id="pass2" ng-model="pass2" name="pass2" placeholder="NetworkPassword">
+			</div>
+			<br>
+			<div class ="form-inline col-sm">
+				<label >IP:</label>
+				<input  type="text" class="form-control" id="ip" ng-model="data.ip" name="ip">
+				<label >DNS:</label>
+				<input  type="text" class="form-control" id="dns" ng-model="data.dns" name="dns">
+				<label >Subnet:</label>
+				<input  type="text" class="form-control" id="subnet" ng-model="data.subnet" name="subnet">
+				<label >Gateway:</label>
+				<input  type="text" class="form-control" id="gateway" ng-model="data.gateway" name="gateway">
+			</div>
+		</div>
+		<br>
+		<hr>
+		<div style="padding:10px;" class="row">
+			<h4>User Settings</h4>
+			<!--<div class ="form-inline col-sm">
+				<label class="checkbox-inline"><input type="checkbox" id="useUserPass" ng-model="data.useUserPass">Use username and password for login</label>
+			</div>-->
+			<div ng-show ="data.useUserPass" class ="form-inline col-sm">
+				<label >Username:</label>
+				<input  type="text" class="form-control" id="user" ng-model="data.user" name="user" placeholder="UserName">
+				<label >Password:</label>
+				<input  type="password" class="form-control" id="userPass" ng-model="data.userPass" name="userPass" placeholder="UserPassword">
+				<label >Password Confirm:</label>
+				<input  type="password" class="form-control" id="userPass2" ng-model="userPass2" name="userPass2" placeholder="UserPassword">
+			</div>
+		</div>
+		<br>
+		<hr>
+		<div style="padding:10px;" class="row">
+			<button type="button" class="btn btn-default" ng-click="doSave()">Save</button>
+		</div>
+		
+	</div>
+</div>
+</body>
+<script>
+	var app = angular.module('myApp', []);
+	app.controller('myCtrl', function($scope, $http) {
+		$scope.data = {};
+		$scope.data.ssid = "";
+		$scope.data.pass = ""
+		$scope.pass2 ="";
+		$scope.data.ip = "192.168.0.51";
+		$scope.data.dns = "192.168.0.1"
+		$scope.data.subnet ="255.255.255.0";
+		$scope.data.gateway ="192.168.0.1";
+		$scope.data.user ="";
+		$scope.data.userPass ="";
+		$scope.userPass2 ="";
+		$scope.data.useUserPass = true;
+		$scope.doSave = function(){
+			if($scope.data.ssid.length < 3){
+				alert("SSID is not valid!");
+				return;
+			}
+		
+			if($scope.data.pass != $scope.pass2 || $scope.data.pass.length < 1){
+				$scope.data.pass = "";
+				$scope.pass2 ="";
+				alert("Passwords does not match!");
+				return;
+			}
+			
+			if($scope.data.user.length < 3 && $scope.data.useUserPass){
+				alert("User is not valid!");
+				return;
+			}
+			
+			if($scope.data.useUserPass && $scope.data.userPass != $scope.userPass2 || $scope.data.userPass.length < 1){
+				$scope.data.userPass = "";
+				$scope.userPass2 ="";
+				alert("User password does not match!");
+				return;
+			}
+			$scope.params="";
+			$scope.params += '&ssid=' + $scope.data.ssid;
+			$scope.params += '&pass=' + $scope.data.pass;
+			$scope.params += '&ip=' + $scope.data.ip;
+			$scope.params += '&dns=' + $scope.data.dns;
+			$scope.params += '&subnet=' + $scope.data.subnet;
+			$scope.params += '&gateway=' + $scope.data.gateway;
+			$scope.params += '&user=' + $scope.data.user;
+			$scope.params += '&userPass=' + $scope.data.userPass;
+			$scope.params += '&useUserPass=' + $scope.data.useUserPass;
+			$http.get("/action?action=updateNetwork" + $scope.params).
+			then(alert("Your device will restart and apply the settings, this page will be available only after a reset."));
+		};
+	});
+</script>
+</html>

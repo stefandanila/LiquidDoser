@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Aquarium Doser</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.9/angular.min.js"></script>
+  <style>
+	.space-around {padding-bottom:10px; padding-left:10px; padding-right:10px;}
+	.float-right {float:right}
+	.text-white {color: #fff !important;}
+	.header {margin-bottom:0px; padding-bottom:5px; padding-top:5px; background-color: transparent;}
+	.navigation {border-bottom: none; background: #343a40; margin-right: -20px; margin-left: -20px;}
+	.sub-navigation {border-bottom: none; background: darkgray; margin-right: -20px; margin-left: -20px; padding-left:50px;}
+
+	a {
+		text-decoration:none;
+		color:gray;
+	}
+	a:active{
+		color:black;
+		background-color:white;
+	}
+	
+	
+	
+	.nav > li > a {
+		border-radius: 0px !important;
+	}
+	.dashed-line
+	{
+		border: 0.01em dashed white;
+	}
+	
+	.login-div {
+		max-width: 400px;
+		border: solid white;
+		margin-top: 30px;
+		border-radius: 10px;
+		background: white;
+		color: black;
+	}
+	
+	</style>
+</head>
+<body style="background-color: #030C22 !important;">
+<div ng-app="myApp" ng-controller="myCtrl">
+	<div ng-cloak ng-show="isValidated&&!isAuthorized"  class="container login-div" style="max-width: 400px; padding-top:30px;">
+		<h1 style="text-align:center;">Welcome back!</h1>
+		<br/>
+		<form class="form-signin">
+			<label for="inputEmail">Email address</label>
+			<input class="form-control" id="inputEmail" name="username" ng-model="user" placeholder="UserName" required="true" type="text">
+			<label for="inputPassword">Password</label>
+			<input style="paddin"class="form-control" id="inputPassword" name="password" ng-model="pass" placeholder="Password" required="true" type="password">
+			<br/>
+			<button class="btn btn-lg btn-light btn-block" ng-click="doLogin()" >Log in</button>
+			<br/>
+			<div ng-show="failLogin" class="alert alert-danger" role="alert">
+				Wrong username/password!
+			</div>
+		</form>
+	</div>
+	<div ng-show="isAuthorized" ng-cloak>
+		<div class="jumbotron text-center text-white header">
+			<h2>{{controllerName}}</h2>
+			<h5>
+			<a ng-click="doLogout()">Log out</a>
+			</h5>
+		</div>
+		<div class="container text-white">
+			<ul class="nav nav-tabs navigation">
+				<li class="active"><a data-toggle="tab" href="#events">Events</a></li>
+				<li><a data-toggle="tab" href="#manual_control">Manual Control</a></li>
+				<li><a data-toggle="tab" href="#settings">Settings</a></li>
+			</ul>
+			<div class="tab-content">
+				<div id="events" class="tab-pane fade in active">
+					<div style="padding:10px;" class="row">
+						<div ng-show="events" class="col-sm">
+							<p ng-repeat="event in events">{{event.time}} - {{event.event}}</p>
+						</div>
+						<a ng-click="loadMoreEvents()">... load more events</a>
+					</div>
+				</div>
+				
+				<div id="manual_control" class="tab-pane fade in">
+					<div class="row"style="padding:10px;">
+						<div class ="form-inline col-xs-12">
+							<label>Dose : </label>
+							<select class="form-control" id="selectedPump" 
+								ng-model="selectedPump"
+								ng-options="pump.pin as pump.name for pump in pumps"/>										
+							</select>
+							<label>, ml: </label>
+							<input style="width:75px;" type="text" class="form-control" id="quantity" ng-model="doseQuantity" name="doseQuantity">
+							<button id="doseNowQuant"type="button" class="btn btn-default" ng-click="doDosing(false)">Dose now!</button>
+						</div>
+					</div>
+					<div class="row"style="padding:10px;">
+						<div class ="form-inline col-xs-12">
+							<label>Dose : </label>
+							<select class="form-control" id="selectedPump" 
+								ng-model="selectedPump"
+								ng-options="pump.pin as pump.name for pump in pumps"/>										
+							</select>
+							<label>, seconds: </label>
+							<input style="width:75px;" type="text" class="form-control" id="quantitySecs" ng-model="doseDuration" name="doseSeconds">
+							<button id="doseNowSec" type="button" class="btn btn-default" ng-click="doDosing(true)">Dose now!</button>
+						</div>
+					</div>
+				</div>
+				<div id="settings" class="tab-pane fade in">
+					<div class="row" style="background:darkgray;">
+						<div class ="col-xs-12">
+							<ul class="nav nav-tabs sub-navigation">
+								<li class="active"><a data-toggle="tab" href="#general">General</a></li>
+								<li><a data-toggle="tab" href="#schedules">Schedules</a></li>
+								<li><a data-toggle="tab" href="#doses">Doses</a></li>								
+							</ul>
+						</div>
+					</div>
+					<div class="tab-content">
+						<div id="schedules" class="tab-pane fade in">
+							<div ng-show="pumps" class="col-sm">
+								<div style="padding:10px;" class="row">
+									<div class="row">
+										<div class ="col-xs-1">
+										</div>
+										<div class ="col-xs-11">
+											<div class="row">
+												<div class ="col-xs-1">
+												</div>
+												<div class ="col-xs-2">
+													<label>Dose</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>M</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>T</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>W</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>T</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>F</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>S</label>
+												</div>
+												<div class ="col-xs-1">
+													<label>S</label>
+												</div>
+												<div class="col-xs-2">
+												</div>
+											</div>
+										</div>
+									</div>
+									<div ng-repeat="pump in pumps" >
+										<div class="row" style="padding-bottom: 5px;">
+											<div class ="col-xs-12 form-inline" style="padding-right:0px;">
+												<input type="checkbox" id="pump_used" ng-model="pump.used" name="pump_used">
+												<label ng-dblclick="changeEdit()" ng-show="!edit">{{pump.name}}</label>
+												<input ng-show="edit" type="text" class="form-control" id="name" ng-model="pump.name" name="name">										
+											</div>
+										</div>
+										<div class="row">
+											<div class ="col-xs-1"></div>
+											<div ng-show="pump.used" class ="col-xs-11">
+												<div ng-repeat="currentDose in pump.doses">
+													<div class="row">
+														<div class ="col-xs-1">
+															<input type="checkbox" id="current_dose_used" ng-model="currentDose.used" name="current_dose_used">
+														</div>
+														<div class ="col-xs-2">
+															<select class="form-control" id="curentDoseSelect" 
+																ng-model="currentDose.doseId"
+																ng-options="dose.id as dose.name for dose in doses"/>										
+															</select>
+														</div>
+														<div ng-repeat="currentDay in currentDose.days track by $index">
+															<div class ="col-xs-1">
+																<input type="checkbox" id="current_dose_days" ng-model="currentDose.days[$index]" name="current_dose_days">
+															</div>
+														</div>
+														<div class ="col-xs-2">
+															<button ng-if="!$first" type="button" class="btn btn-danger" ng-click="removeDose($index, pump)"><b>-</b></button>
+															<button ng-if="$last && $index < 19" type="button" class="btn btn-primary" ng-click="addDose(pump)"><b>+</b></button>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+										<div class="row">
+											<hr>
+										</div>																		
+									</div>
+								</div>
+							</div>
+						</div>
+						<div id="doses" class="tab-pane fade in">
+							<div style="padding:10px;" class="row">
+								<!-- Generic Rules -->
+								<div ng-show="doses">
+									<div ng-repeat="dose in doses">
+										<div class="row">
+											<div class ="form-inline col-xs-3">
+												<label>Name: </label>
+												<input type="text" class="form-control" id="dose_name" ng-model="dose.name" name="dose_name">
+											</div>
+											<div class ="form-inline col-xs-3">
+												<label>Time: </label>
+												<input type="text" class="form-control" id="dose_time" ng-model="dose.timeOfDosing" name="dose_time">
+											</div>
+											<div class ="form-inline col-xs-4">
+												<label>Quantity Ml:</label>
+												<input type="text" class="form-control" id="dose_quantity" ng-model="dose.quantityMl" name="dose_quantity">
+											</div>
+											<div class ="form-inline col-xs-2">
+												<button ng-if="!$first" type="button" class="btn btn-danger" ng-click="removeDoseFromAllDoses($index)"><b>-</b></button>
+												<button ng-if="$last && $index < 19" type="button" class="btn btn-primary" ng-click="addDoseToAllDoses($index)"><b>+</b></button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div id="general" class="tab-pane fade in active">
+							<div style="padding:10px;" class="row">
+								<div class="row">
+									<div class="form-inline col-xs-12">
+										<label>Application display name: </label>
+										<input type="text" class="form-control" id="controllerName" ng-model="controllerName" name="controllerName">
+									</div>
+								</div>
+								<hr class="dashed-line">
+								<div class="row">
+									<div class="form-inline col-xs-12">
+										<label>Serial: {{serialNo}} | Current version: {{version}}</label>
+									</div>
+								</div>
+								<hr class="dashed-line">
+								<div class="row">
+									<div class="form-inline col-xs-12">
+										<label>Time zone (UTC):</label>
+										<select class="form-control" id="rule_mode"
+												ng-model="selectedTimeZone"
+												ng-options="zone.value as zone.text for zone in timeZones"/>
+										</select>
+										<label>,</label>
+										<input type="checkbox" id="summerTime" ng-model="isSummerTime">
+										<label>Summer time</label>
+									</div>
+								</div>
+								<hr class="dashed-line">			
+								<div class="row">
+									<div class="form-inline col-xs-12">
+										<label>Time in seconds for 100ml: </label>
+										<input style="width:75px;" type="text" class="form-control" id="timeFor100ml" ng-model="timeFor100ml" name="timeFor100ml">
+									</div>
+								</div>
+								<hr class="dashed-line">
+							</div>
+						</div>
+					</div>
+					<div style="padding:10px;" class="row">
+						<button type="button" class="btn btn-default" ng-click="doSave()">Save</button>
+					</div>
+				</div>
+			
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	var app = angular.module('myApp', []);
+	app.controller('myCtrl', function($scope, $http, $location) {
+		$scope.isValidated = false;
+		$scope.isAuthorized = false;
+		$scope.failLogin = false;
+		$scope.user = '';
+		$scope.pass = '';
+		$scope.events = [];
+		$scope.selectedPump = 0;
+		$scope.doseQuantity = 0;
+		$scope.doseDuration = 0;
+		$scope.pumps = [];
+		$scope.doses = [];
+		
+		
+		$scope.validate = function(){
+			$http.get("/action?action=validate", {headers: {"Authorization": "Bearer " + localStorage.getItem("token")}})
+			.then(function(response) {
+				$scope.isAuthorized = response.data;
+				$scope.isValidated = true;
+				if($scope.isAuthorized){
+					$scope.loadContent();
+				}
+			}, function(error){
+			$scope.isValidated = true;
+			$scope.isAuthorized = false;});
+		};
+		
+		$scope.validate();
+		
+		$scope.doLogin = function(){
+			var logInCredetials = "&user=" + $scope.user + "&pass=" + $scope.pass;
+			$http.post("/action?action=login", logInCredetials, {headers: {"Content-Type": "application/x-www-form-urlencoded"}})
+			.then(function(response) {
+					localStorage.setItem("token", response.data);
+					$scope.isAuthorized = true;
+					$scope.failLogin = false;
+					$scope.loadContent();
+			}, function(error){
+				$scope.user = '';
+				$scope.pass = '';
+				$scope.failLogin = true;});
+		};
+		
+		$scope.doLogout = function(){
+			$scope.isAuthorized = false;
+			localStorage.removeItem('token');
+		};
+		
+		
+		$scope.loadContent = function(){
+			$scope.getEvents(0);
+			$scope.getGeneral();
+			$scope.getDoses();
+			$scope.getPumps();
+		};
+		
+		$scope.getGeneral = function(){
+			$http.get("/action?action=getGeneralSettings",{headers: {"Authorization": "Bearer " + localStorage.getItem("token")}})
+				.then(function(response) {
+					$scope.isSummerTime = response.data.isSummerTime;
+					$scope.selectedTimeZone = response.data.selectedTimeZone;
+					$scope.timeFor100ml = response.data.timeFor100ml;
+					$scope.controllerName = response.data.controllerName;
+					$scope.version = response.data.version;
+					$scope.serialNo = response.data.serialNo;
+				}, 
+				function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+		};
+		
+		$scope.getEvents = function(offset){
+			$http.get("/action?action=events&" + offset + "=0&numberOfEvents=15", {headers: {"Authorization": "Bearer " + localStorage.getItem("token")}})
+			.then(function(response) { $scope.events = response.data;}, 
+				function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+		};
+		
+		$scope.getPumps = function(){
+			$http.get("/action?action=pumps", {headers: {"Authorization": "Bearer " + localStorage.getItem("token")}})
+			.then(function(response) { $scope.pumps = response.data;}, 
+				function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+		};
+		
+		$scope.getDoses = function(){
+			$http.get("/action?action=doses", {headers: {"Authorization": "Bearer " + localStorage.getItem("token")}})
+			.then(function(response) { $scope.doses = response.data;}, 
+				function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+		};
+		
+		$scope.doAction = function(action){
+			$http.get("/action?action=" + action, {headers: {"Authorization":"Bearer " +  localStorage.getItem("token")}})
+				.then(function(response) {
+							$http.get("/action?action=events", {headers: {"Authorization":"Bearer " +  localStorage.getItem("token")}})
+								.then(function(response) {$scope.events = response.data;}, function(error){if(error.status === 401){$scope.isAuthorized = false;}});}, 
+					function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+		};
+		
+		$scope.doDosing = function(useDuration){
+			document.getElementById('doseNowQuant').disabled = true;
+			document.getElementById('doseNowSec').disabled = true;
+			$http.get("/action?action=ON&pin=" + $scope.selectedPump + (useDuration ? "&duration=" + $scope.doseDuration :"&quantity=" + $scope.doseQuantity), {headers: {"Authorization":"Bearer " +  localStorage.getItem("token")}})
+				.then(function(response) {
+							document.getElementById('doseNowQuant').disabled = false;
+							document.getElementById('doseNowSec').disabled = false;
+							$http.get("/action?action=events", {headers: {"Authorization":"Bearer " +  localStorage.getItem("token")}})
+								.then(function(response) {$scope.events = response.data;}, function(error){if(error.status === 401){$scope.isAuthorized = false;}});}, 
+					function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+		};
+		
+		$scope.loadMoreEvents = function(){
+			if($scope.events.length < 60){
+				$http.get("/action?action=events&offset=" + $scope.events.length + "&numberOfEvents=15", {headers: {"Authorization": "Bearer " + localStorage.getItem("token")}})
+					.then(function(response) {
+							var returnedEvents = response.data;
+							for (var i = 0; i < returnedEvents.length; i++){
+								$scope.events.push(returnedEvents[i]);
+							}
+						}, 
+				function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+			}			
+		}
+		
+		$scope.removeDose=function($index, pump){ 
+			pump.doses.splice($index,1);     
+		}
+		
+		$scope.addDose=function(pump){ 
+			pump.doses.push({"used":false,"doseId":1,"days":[false,false,false,false,false,false,false]});
+		}
+		
+		$scope.removeDoseFromAllDoses=function(index){ 
+			$scope.doses.splice(index,1);     
+		}
+		
+		$scope.addDoseToAllDoses=function(index){ 
+			var id = $scope.getId();
+			$scope.doses.push({"id": id, "name":"", "timeOfDosing": 0, "quantityMl": 0 });
+		}
+		
+		$scope.getId = function(){
+			var id = 0;
+			for (var i = 0; i < $scope.doses.length; i++) 
+			{
+				if($scope.doses[i].id > id)
+				{
+					id = $scope.doses[i].id;
+				}
+			}
+			return id + 1;
+		};
+		
+		$scope.edit = false;
+		$scope.changeEdit = function()
+		{
+			return $scope.edit = true;
+		}
+		
+		$scope.timeZones = [{"value": -12,"text": "(GMT -12:00) Eniwetok, Kwajalein"}, {"value": -11,"text": "(GMT -11:00) Midway Island, Samoa"},
+				   {"value": -10,"text": "(GMT -10:00) Hawaii"},{"value": -9,"text": "(GMT -9:00) Alaska"},
+				   {"value": -8,"text": "(GMT -8:00) Pacific Time (US & Canada)"}, {"value": -7,"text": "(GMT -7:00) Mountain Time (US & Canada)"},
+				   {"value": -6,"text": "(GMT -6:00) Central Time (US & Canada), Mexico City"}, {"value": -5,"text": "(GMT -5:00) Eastern Time (US & Canada), Bogota, Lima"},
+				   {"value": -4,"text": "(GMT -4:00) Atlantic Time (Canada), Caracas, La Paz"}, {"value": -3.5,"text": "(GMT -3:30) Newfoundland"},
+				   {"value": -3,"text": "(GMT -3:00) Brazil, Buenos Aires, Georgetown"}, {"value": -2,"text": "(GMT -2:00) Mid-Atlantic"},
+				   {"value": -1,"text": "(GMT -1:00) Azores, Cape Verde Islands"}, {"value": 0,"text": "(GMT) Western Europe Time, London, Lisbon, Casablanca"},
+				   {"value": 1,"text": "(GMT +1:00) Brussels, Copenhagen, Madrid, Paris"}, {"value": 2,"text": "(GMT +2:00) Bucharest, Athena, South Africa"},
+				   {"value": 3,"text": "(GMT +3:00) Baghdad, Riyadh, Moscow, St. Petersburg"}, {"value": 3.5,"text": "(GMT +3:30) Tehran"},
+				   {"value": 4,"text": "(GMT +4:00) Abu Dhabi, Muscat, Baku, Tbilisi"}, {"value": 4.5,"text": "(GMT +4:30) Kabul"},
+				   {"value": 5,"text": "(GMT +5:00) Ekaterinburg, Islamabad, Karachi, Tashkent"}, {"value": 5.5,"text": "(GMT +5:30) Bombay, Calcutta, Madras, New Delhi"},
+				   {"value": 5.75,"text": "(GMT +5:45) Kathmandu"}, {"value": 6,"text": "(GMT +6:00) Almaty, Dhaka, Colombo"},
+				   {"value": 7,"text": "(GMT +7:00) Bangkok, Hanoi, Jakarta"}, {"value": 8,"text": "(GMT +8:00) Beijing, Perth, Singapore, Hong Kong"},
+				   {"value": 9,"text": "(GMT +9:00) Tokyo, Seoul, Osaka, Sapporo, Yakutsk"}, {"value": 9.5,"text": "(GMT +9:30) Adelaide, Darwin"},
+				   {"value": 10,"text": "(GMT +10:00) Eastern Australia, Guam, Vladivostok"}, {"value": 11,"text": "(GMT +11:00) Magadan, Solomon Islands, New Caledonia"},
+				   {"value": 12,"text": "(GMT +12:00) Auckland, Wellington, Fiji, Kamchatka"}];
+		
+		$scope.doSave = function(){
+			
+			if (confirm("Are you sure you want to make this changes? Note that frecvent changes are wearing off the flash memory! The controller will restart to apply the updates!"))
+			{	
+				var generalParams = '&controllerName=' + $scope.controllerName;				
+				generalParams += '&isSummerTime=' + $scope.isSummerTime;
+				generalParams += '&selectedTimeZone=' + $scope.selectedTimeZone;
+				generalParams += '&timeFor100ml=' + $scope.timeFor100ml;
+				
+				
+				var pumpsParams = "";
+				for (var i = 0; i < $scope.pumps.length; i++) {
+					if(i != 0) {
+						pumpsParams += '&';
+					}
+				 pumpsParams += $scope.pumps[i].pin + "_name" +'=' + $scope.pumps[i].name;
+				 pumpsParams += '&' + $scope.pumps[i].pin + "_used" +'=' + $scope.pumps[i].used;
+					for (var j = 0; j < $scope.pumps[i].doses.length; j++)
+					{
+						pumpsParams += '&' + $scope.pumps[i].pin + "_doses_" + j +"_used" + '=' + $scope.pumps[i].doses[j].used;
+						pumpsParams += '&' + $scope.pumps[i].pin + "_doses_" + j +"_id" + '=' + $scope.pumps[i].doses[j].doseId;
+						for (var k = 0; k < $scope.pumps[i].doses[j].days.length; k++)
+						{
+							pumpsParams += '&' + $scope.pumps[i].pin + "_doses_" + j +"_day_" + k + '=' + $scope.pumps[i].doses[j].days[k];
+						}
+					}	
+				}
+				
+				var dosesParams = "";
+				for (var i = 0; i < $scope.doses.length; i++) {
+					if(i != 0) {
+						dosesParams += '&';
+					}
+
+					dosesParams += i + "_id" +'=' + $scope.doses[i].id;
+					dosesParams += '&' + i + "_name" +'=' + $scope.doses[i].name;	
+					dosesParams += '&' + i + "_timeOfDosing" +'=' + $scope.doses[i].timeOfDosing;	
+					dosesParams += '&' + i + "_quantityMl" +'=' + $scope.doses[i].quantityMl;	
+				}
+				
+				$http.post("/action?action=updateGeneral", generalParams, {headers: {"Authorization": "Bearer " + localStorage.getItem("token"), "Content-Type": "application/x-www-form-urlencoded"}})
+					.then(function(response) {
+						$http.post("/action?action=updateDoses", dosesParams, {headers: {"Authorization": "Bearer " + localStorage.getItem("token"), "Content-Type": "application/x-www-form-urlencoded"}});
+						$http.post("/action?action=updatePumps", pumpsParams, {headers: {"Authorization": "Bearer " + localStorage.getItem("token"), "Content-Type": "application/x-www-form-urlencoded"}})
+							.then(function(response) {
+								$http.get("/action?action=restart", {headers: {"Authorization":"Bearer " +  localStorage.getItem("token")}}).then(function(response) {/*nothing*/ }, function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+							}, function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+					}, function(error){if(error.status === 401){$scope.isAuthorized = false;}});
+			};
+			$scope.edit = false;
+		};		
+	});
+</script>
+</body>
+</html>  
