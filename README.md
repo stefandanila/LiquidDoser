@@ -18,7 +18,7 @@ To install the sketches use Arduino IDE, install the ESP board in Settings -> Ad
 ### From the code
 Make changes in esp8266/data/network.config to suit your network configuration 
 ### From UI
- A network settings page is available if the file esp8266/data/network.config is not uploaded to esp or if it is empty. Use your smart phone and make a hostspot with ssid: config and password: 12345678 , then monitor the hostspot for connected devices copy the ip address, and use a browser from same smart phone to connect to that ip.
+ A network settings page is available if the file esp8266/data/network.config is not uploaded to esp or if it is empty. Use your smart phone and make a hotspot with ssid: config and password: 12345678 , then monitor the hotspot for connected devices copy the ip address, and use a browser from same smart phone to connect to that ip.
 
 # Disclaimer
 This project is something I put togher to control and monitor my personal aquarium ferts dosage, it is my second project with esp, I am sure that lots of thing can be done better and I am ager to learn them from your input. This project can be use as it is or modify it to suit your need, for me it is working since winter of 2020.
